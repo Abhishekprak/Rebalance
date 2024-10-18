@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File,Query
 import pandas as pd
 import io
 
@@ -55,19 +55,30 @@ def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/portfolio")
-async def get_portfolio(
+@app.post("/portfolio/{strategy_name}")
+async def get_portfolio_for_strategy(
+    strategy_name: str,
     old_file: UploadFile = File(..., description="CSV file for old portfolio"),
     new_file: UploadFile = File(..., description="CSV file for new lookback data"),
-    rows: int = 60
+    rows: int = Query(60, description="Number of rows to process")
 ):
     try:
         # Read the uploaded files into pandas DataFrames
         old_df = pd.read_csv(io.BytesIO(await old_file.read()))
         new_df = pd.read_csv(io.BytesIO(await new_file.read()))
 
-        # Process the portfolios using the function
+        # Strategy-specific adjustments
+        if strategy_name == "n200":
+            rows = 40  # Custom row count for strategy1
+        elif strategy_name == "lv":
+            rows = 60  # Custom row count for strategy2
+        elif strategy_name == "n50":
+            rows = 10  # Custom row count for strategy3
+        elif strategy_name == "n500":
+            rows = 50
+
+        # Process the portfolios using the generic function
         return process_portfolios(old_df, new_df, rows)
-    
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing files: {e}")
