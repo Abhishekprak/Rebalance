@@ -1,8 +1,10 @@
+import json
 from fastapi import FastAPI, HTTPException, UploadFile, File,Query
 import pandas as pd
 import io
+from configuration import supabase
 
-app = FastAPI()
+app = FastAPI(title="Nifty-shloka-rebalancing")
 
 def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
     try:
@@ -58,13 +60,17 @@ def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
 @app.post("/portfolio/{strategy_name}")
 async def get_portfolio_for_strategy(
     strategy_name: str,
-    old_file: UploadFile = File(..., description="CSV file for old portfolio"),
+    # old_file: UploadFile = File(..., description="CSV file for old portfolio"),
     new_file: UploadFile = File(..., description="CSV file for new lookback data"),
     rows: int = Query(60, description="Number of rows to process")
 ):
     try:
         # Read the uploaded files into pandas DataFrames
-        old_df = pd.read_csv(io.BytesIO(await old_file.read()))
+        old_df = supabase.table("<TABLE-NAME>").select("*").execute()
+        old_df=old_df.model_dump_json()
+        old_df=pd.DataFrame(json.loads(old_df)['data'])
+        old_df.drop('id', axis=1)
+        # pd.read_csv(io.BytesIO(await old_file.read()))
         new_df = pd.read_csv(io.BytesIO(await new_file.read()))
 
         # Strategy-specific adjustments
