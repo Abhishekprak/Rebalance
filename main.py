@@ -3,18 +3,15 @@ from fastapi import FastAPI, HTTPException, UploadFile, File,Query
 import pandas as pd
 import io
 from configuration import StratagyName, supabase,new_column_names
+from rebalancing import clean_df, process_portfolios_rebalance
 # from logging_config import logger
 app = FastAPI(title="Nifty-shloka-rebalancing")
 
-def clean_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Replace NaN or Infinity values in the DataFrame with None."""
-    df = df.replace([pd.NA, pd.NaT, float('inf'), float('-inf')], None)
-    df = df.fillna(0)  # Or replace with 0 or any other default value
-    return df
 
 def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
     try:
         df_old.rename({'current_price': 'Last Close'}, axis=1, inplace=True)
+        print("Issue is below")
         first_n_new = df_new.head(rows).copy()
         first_n_new.rename({'Trading Symbol': 'Ticker'}, axis=1, inplace=True)
 
@@ -43,11 +40,11 @@ def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
 
 
         num_shares = shares_to_sell["Name"].count()
-        new_addition["Shares"] = (total_from_selling / num_shares) / new_addition["Last Close"].replace({0: 1})  # Avoid division by zero
-        new_addition["Shares"] = new_addition["Shares"].astype(int)
+        new_addition["shares"] = (total_from_selling / num_shares) / new_addition["Last Close"].replace({0: 1})  # Avoid division by zero
+        new_addition["shares"] = new_addition["shares"].astype(int)
 
         new_model = pd.concat([shares_to_keep, new_addition])
-
+        new_model_value = (new_model["Last Close"] * new_model["shares"]).sum().round()
         # Clean final DataFrames before returning
         new_model = clean_df(new_model)
         shares_to_sell = clean_df(shares_to_sell)
@@ -56,7 +53,8 @@ def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
         return {
             'shares_to_sell': shares_to_sell.to_dict(orient='records'),
             'shares_to_buy': new_addition.to_dict(orient='records'),
-            'new_model_portfolio': new_model.to_dict(orient='records')
+            'new_model_portfolio': new_model.to_dict(orient='records'),
+            "new_model_value":new_model_value
         }
 
     except Exception as e:
@@ -67,8 +65,8 @@ def process_portfolios(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
 async def get_portfolio_for_strategy(
     strategy_name: StratagyName,
     # old_file: UploadFile = File(..., description="CSV file for old portfolio"),
-    new_file: UploadFile = File(..., description="CSV file for new lookback data"),
-    rows: int = Query(60, description="Number of rows to process")
+    new_file: UploadFile = File(..., description="CSV file for new lookback data")
+    # rows: int = Query(60, description="Number of rows to process")
 ):
     try:
         # Read the uploaded files into pandas DataFrames
@@ -95,7 +93,7 @@ async def get_portfolio_for_strategy(
             rows = 50
         # print(process_portfolios(old_df, new_df, rows))
         # Process the portfolios using the generic function
-        return process_portfolios(old_df, new_df, rows)
+        return process_portfolios_rebalance(old_df, new_df, rows)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing files: {e}")
