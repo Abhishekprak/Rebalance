@@ -6,7 +6,7 @@ load_dotenv()
 
 class StratagyName(str, Enum):
     nifty_n200_rebalance = "n200"
-    lv="lv"
+    ns_low_volatility="low_volatility"
     nifty_n50_rebalance="n50"
     nifty_n500_rebalance="n500"
 

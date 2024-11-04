@@ -4,8 +4,7 @@ import pandas as pd
 import io
 from configuration import StratagyName, supabase,new_column_names
 from rebalancing import clean_df, process_portfolios_rebalance
-import datetime
-# from logging_config import logger
+
 app = FastAPI(title="Nifty-shloka-rebalancing",version="0.0.1")
 
 
@@ -31,7 +30,7 @@ async def get_portfolio_for_strategy(
         # print(new_df)
         if strategy_name.value == "n200":
             rows = 40  # Custom row count for strategy1
-        elif strategy_name.value == "lv":
+        elif strategy_name.value == "low_volatility":
             rows = 60  # Custom row count for strategy2
         elif strategy_name.value == "n50":
             rows = 10  # Custom row count for strategy3
@@ -42,7 +41,21 @@ async def get_portfolio_for_strategy(
         add the data back to {strategy_name.name} table
         create a history tradelog for each and push
         """
-        return rebalance_processed_data['new_model_portfolio']
+        if rebalance_processed_data["new_model_portfolio"] is not None:
+            # log DATA IS GETTING ERASED
+            supabase.table(strategy_name.name).delete().neq("id", 0).execute()
+            supabase.table(strategy_name.name).insert(rebalance_processed_data["new_model_portfolio"]).execute()
+        # add sell and buy part to trade log
+        if rebalance_processed_data["shares_to_sell"] is not None:
+            rebalance_processed_data["shares_to_sell"]['index']=strategy_name.name
+            supabase.table('rebalance_history').insert(rebalance_processed_data["shares_to_sell"]).execute()
+        if rebalance_processed_data["shares_to_buy"] is not None:
+            rebalance_processed_data["shares_to_buy"]['index']=strategy_name.name
+            supabase.table('rebalance_history').insert(rebalance_processed_data["shares_to_buy"]).execute()
+        return {
+            "status": "success",
+            "data": rebalance_processed_data
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing files: {e}")
@@ -53,6 +66,5 @@ cron endpoint to check if the current day falls under any of the logic? if so ad
 
 @app.get("/check/rebalance", name="Cron endpoint for getting next update date")
 async def check_rebalance():
-    current_date = datetime.date.today()
-    day_of_week = current_date.strftime("%A")  # Get the day name like "Monday"
-    return {"current_date": str(current_date), "day_of_week": day_of_week}
+    # day_of_week = current_date.strftime("%A")  # Get the day name like "Monday"
+    return {"current_date": ""}

@@ -1,11 +1,24 @@
+# from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from datetime import datetime, timedelta
 
+def first_monday(year, month):
+    first_day = datetime(year, month, 1)
+    first_monday = first_day + timedelta(days=(7 - first_day.weekday() % 7))
+    return first_monday
 
 async def NS_N50_Momentum():
-    # Example code
     return "NS_N50_Momentum result"
 
 async def NS_Focused_Growth():
     # Example code
+    current_date = datetime.now().day
+    today = datetime.now()
+    if current_date == 15:
+        next_month_15th = today + relativedelta(months=1)
+        next_month_15th = next_month_15th.replace(day=15)
+        print(next_month_15th)
+        pass
     return "NS_Focused_Growth result"
 
 async def GOLD():
@@ -17,7 +30,13 @@ async def SILVER():
     return "SILVER result"
 
 async def NS_Low_Volatility():
-    # Example code
+    today = datetime.now()
+    if today.weekday() == 0 and 1 <= today.day <= 7:
+        print("Today is the first Monday of the month.")
+        next_month = today.month + 1 if today.month < 12 else 1
+        next_year = today.year if today.month < 12 else today.year + 1
+        next_first_monday = first_monday(next_year, next_month)
+        print("Next first Monday:", next_first_monday)
     return "NS_Low_Volatility result"
 
 async def NS_N500_Momentum():
@@ -25,11 +44,22 @@ async def NS_N500_Momentum():
     return "NS_N500_Momentum result"
 
 async def Gilt():
-    # Example code
+    today = datetime.now()
+    if today.weekday() == 0 and 1 <= today.day <= 7:
+        print("Today is the first Monday of the month.")
+        next_month = today.month + 1 if today.month < 12 else 1
+        next_year = today.year if today.month < 12 else today.year + 1
+        next_first_monday = first_monday(next_year, next_month)
+        print("Next first Monday:", next_first_monday)
     return "Gilt result"
 
 async def NS_Flexicap_Value():
-    # Example code
+    current_date = datetime.now().day
+    today = datetime.now()
+    if current_date == 1:
+        next_month_1th = today + relativedelta(months=1)
+        next_month_1th = next_month_1th.replace(day=1)
+        print(next_month_1th)
     return "NS_Flexicap_Value result"
 
 async def NS_N200_Momentum():
