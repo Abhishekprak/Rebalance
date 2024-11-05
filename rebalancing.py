@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import HTTPException
 import pandas as pd
 import io
@@ -9,7 +10,7 @@ def clean_df(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def process_portfolios_rebalance(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int):
+def process_portfolios_rebalance(df_old: pd.DataFrame, df_new: pd.DataFrame, rows: int,strategy_name: str):
     try:
         
         df_old.rename({'current_price': 'Last Close'}, axis=1, inplace=True)
@@ -62,16 +63,14 @@ def process_portfolios_rebalance(df_old: pd.DataFrame, df_new: pd.DataFrame, row
         )
         new_model = new_model.drop(columns=["id"])
         new_model.rename({"Last Close":'current_price'}, axis=1, inplace=True)
-        # if new_model["average_price"].empty():
-        #     new_model['average_price'] = new_addition['Last Close']
-        shares_to_sell['status']="sell"
-        shares_to_sell = shares_to_sell.drop(columns=["id"])
-        new_addition["status"]="buy"
-        # new_addition.rename({"Last Close":'current_price'}, axis=1, inplace=True)
-        # new_addition["average_price"]=new_addition["current_price"]
-        # new_addition["returns_percent"]=0
-        # new_addition["weightage"]=round(((new_model["Last Close"]*new_model["shares"])/new_model_value)*100,2)
-        # new_addition = new_addition.drop(columns=["id"])
+        shares_to_sell['status']="SELL"
+        shares_to_sell['strategy']=strategy_name
+        shares_to_sell['date']=datetime.now().strftime("%Y-%m-%d")
+        shares_to_sell = shares_to_sell.drop(columns=["id","Ticker","Last Close","average_price","returns_percent","weightage","shares"])
+        new_addition["status"]="BUY"
+        new_addition['strategy']=strategy_name
+        new_addition['date']=datetime.now().strftime("%Y-%m-%d")
+        new_addition = new_addition.drop(columns=["Ticker","Last Close","shares"])
         new_model = clean_df(new_model)
         shares_to_sell = clean_df(shares_to_sell)
         new_addition = clean_df(new_addition)

@@ -4,6 +4,7 @@ import pandas as pd
 import io
 from configuration import StratagyName, supabase,new_column_names
 from rebalancing import clean_df, process_portfolios_rebalance
+from datetime import datetime
 
 app = FastAPI(title="Nifty-shloka-rebalancing",version="0.0.1")
 
@@ -18,6 +19,7 @@ async def get_portfolio_for_strategy(
         old_df = supabase.table(strategy_name.name).select("*").execute()
         old_df=old_df.model_dump_json()
         old_df=pd.DataFrame(json.loads(old_df)['data'])
+        # print(old_df)
         old_df.drop('id', axis=1)
         # pd.read_csv(io.BytesIO(await old_file.read()))
         new_df = pd.read_csv(io.BytesIO(await new_file.read()))
@@ -36,21 +38,22 @@ async def get_portfolio_for_strategy(
             rows = 10  # Custom row count for strategy3
         elif strategy_name.value == "n500":
             rows = 50
-        rebalance_processed_data=process_portfolios_rebalance(old_df, new_df, rows)
+        rebalance_processed_data=process_portfolios_rebalance(old_df, new_df, rows, strategy_name.value)
         """
         add the data back to {strategy_name.name} table
         create a history tradelog for each and push
         """
+        # print(rebalance_processed_data["shares_to_sell"])
         if rebalance_processed_data["new_model_portfolio"] is not None:
             # log DATA IS GETTING ERASED
             supabase.table(strategy_name.name).delete().neq("id", 0).execute()
             supabase.table(strategy_name.name).insert(rebalance_processed_data["new_model_portfolio"]).execute()
         # add sell and buy part to trade log
         if rebalance_processed_data["shares_to_sell"] is not None:
-            rebalance_processed_data["shares_to_sell"]['index']=strategy_name.name
+            # add date
             supabase.table('rebalance_history').insert(rebalance_processed_data["shares_to_sell"]).execute()
         if rebalance_processed_data["shares_to_buy"] is not None:
-            rebalance_processed_data["shares_to_buy"]['index']=strategy_name.name
+            # add date
             supabase.table('rebalance_history').insert(rebalance_processed_data["shares_to_buy"]).execute()
         return {
             "status": "success",
