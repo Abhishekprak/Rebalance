@@ -1,4 +1,4 @@
-$version="v1.0.0"
+$version="4"
 $imageName = "kaushiknifty/nifty-rebalance:$version"
 # $gcrImageName = "asia-south1-docker.pkg.dev/nifty-shloka-stf/nifty-shloka-stf/nifty-stf:$version"
 

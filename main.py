@@ -2,11 +2,12 @@ import json
 from fastapi import FastAPI, HTTPException, UploadFile, File,Query
 import pandas as pd
 import io
-from configuration import StratagyName, supabase,new_column_names
+from config.configuration import StratagyName, supabase,new_column_names
+from helper.monitor import compute_next_action
 from rebalancing import clean_df, process_portfolios_rebalance
 from datetime import datetime
 
-app = FastAPI(title="Nifty-shloka-rebalancing",version="0.0.1")
+app = FastAPI(title="Nifty-shloka-rebalancing",version="0.0.3")
 
 
 @app.post("/portfolio/{strategy_name}")
@@ -69,5 +70,18 @@ cron endpoint to check if the current day falls under any of the logic? if so ad
 
 @app.get("/check/rebalance", name="Cron endpoint for getting next update date")
 async def check_rebalance():
-    # day_of_week = current_date.strftime("%A")  # Get the day name like "Monday"
-    return {"current_date": ""}
+    strategies = supabase.table("strategies").select("id, name, action_interval").execute().data
+
+    results = []
+    for strategy in strategies:
+        next_date = compute_next_action(strategy.get("action_interval"))
+        if next_date is None:
+            continue
+        response_update = supabase.table("strategies").update(
+            {"next_action_date": next_date.isoformat()}
+        ).eq("id", strategy["id"]).execute()
+        print(response_update)
+        results.append({"name": strategy["name"], "date": next_date})
+
+    # Return the responses to the client
+    return {"results": results}
